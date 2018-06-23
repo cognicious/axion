@@ -1,6 +1,14 @@
-(ns cognicious.axion)
+(ns cognicious.axion
+  (:gen-class)
+  (:import
+   (oshi.json SystemInfo)))
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+(defn -main
+  [& args]
+  (println "Hello, World!")
+  (let [si (SystemInfo.)]
+    (println (-> si .toJSON))
+    (println)
+    (println)
+    (println)
+    (println (-> si .getOperatingSystem .toJSON))))
