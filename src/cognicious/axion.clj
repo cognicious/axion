@@ -1,17 +1,31 @@
 (ns cognicious.axion
   (:gen-class)
+  (:require
+   [clojure.data.json :as json]
+   [clojure.java.io :as io]
+   [clojure.pprint :as pp])
   (:import
-   (oshi.json SystemInfo)))
+   (java.util Properties)
+   (oshi.json SystemInfo)
+   (oshi.util EdidUtil)))
 
-(def *properties-filename* "oshi.json.properties")
+(def properties-filename "oshi.json.properties")
 
-(defn get-properties-file []
-  (with-open [is (-> (clojure.java.io/resource *properties-filename*)
-                     (clojure.java.io/input-stream))]
-    (doto (java.util.Properties.)
+(defn properties-file []
+  (with-open [is (-> (io/resource properties-filename)
+                     (io/input-stream))]
+    (doto (Properties.)
       (.load is))))
+
+(defn system-info []
+  (let [si (SystemInfo.)]
+    (-> si 
+        (.toJSON (properties-file)) 
+        .toString
+        (json/read-str :key-fn keyword))))
 
 (defn -main
   [& args]
-  (let [si (SystemInfo.)]
-    (println (-> si (.toJSON (get-properties-file))))))
+  (let [mk1 (System/currentTimeMillis)]
+    (pp/pprint (system-info))
+    (println (- (System/currentTimeMillis) mk1) "ms")))
