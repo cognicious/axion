@@ -9,6 +9,7 @@
                  [com.github.oshi/oshi-json "3.6.0"]
                  ;; webserver
                  [aleph "0.4.6"]
+                 [bidi "2.1.3"]
                  ;; logging
                  [org.apache.logging.log4j/log4j-core "2.11.0"]
                  [org.apache.logging.log4j/log4j-slf4j-impl "2.11.0"]]
