@@ -37,23 +37,24 @@
             r 
             connectedDevices)))
 
-(defn get-storage [info storage-name-default]
+(defn get-storage [info storage-name]
   (let [storages (get-in info [:operatingSystem :fileSystem :fileStores])]
-    (if storage-name-default
-      (reduce (fn [r {:keys [name] :as i}] 
-                (if (= name storage-name-default)
+    (if storage-name
+      (reduce (fn [r {:keys [name volume] :as i}] 
+                (if (or (= name storage-name)
+                        (= volume storage-name))
                   (reduced i)
                   r))
               nil
               storages)
       (first storages))))
 
-(defn get-interface [info network-name-default]
+(defn get-interface [info network-name]
   (let [interfaces (get-in info [:hardware :networks])]
-    (if network-name-default
+    (if network-name
       (reduce (fn [r {:keys [name displayName] :as i}] 
-                (if (or (= name network-name-default)
-                        (= displayName network-name-default))
+                (if (or (= name network-name)
+                        (= displayName network-name))
                   (reduced i)
                   r))
               nil
@@ -63,16 +64,15 @@
 (defn info 
   ([]
    (info {}))
-  ([{:keys [storage-name-default network-name-default] :as config}]
+  ([{:keys [storage-default network-default] :as config}]
    (let [sys-info (SystemInfo.)
          info (info-raw sys-info #(json/read-str % :key-fn keyword))
          ;; defaults
-         os-storage (get-storage info storage-name-default)
-         net-interface (get-interface info network-name-default)
-         mem-factor (* 1024 1024 1024) ; GB
-         st-factor (* 1024 1024 1024) ; GB
-         net-factor (* 1024 1024) ; MB
-         ]
+         os-storage (get-storage info storage-default)
+         net-interface (get-interface info network-default)
+         mem-factor (* 1024 1024 1024)
+         st-factor (* 1024 1024 1024)
+         net-factor (* 1024 1024)]
      (json/write-str
       {:os-platform (get-in info [:platform])
        :os-version (get-in info [:operatingSystem :version :version])
@@ -111,10 +111,12 @@
                                    0
                                    (get-in info [:hardware :usbDevices]))}))))
 
-(defn send-data [host port data]
-  (with-open [d-socket (java.net.Socket. host port)
-              os (.getOutputStream d-socket)]
-    (.write os (.getBytes (pr-str data) "UTF-8"))
-    (.write os 10)))
-
-
+(defn send-data [data tcp-push-host tcp-push-port]
+  (log/info (pr-str {:sending-data-to [tcp-push-host tcp-push-port]}))
+  (try
+    (with-open [d-socket (java.net.Socket. tcp-push-host tcp-push-port)
+                os (.getOutputStream d-socket)]
+      (.write os (.getBytes (pr-str data) "UTF-8"))
+      (.write os 10))
+    (catch Exception e
+      (log/error (pr-str {:cause (-> e .getMessage)})))))
