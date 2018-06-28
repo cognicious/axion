@@ -1,0 +1,6 @@
+{:http-port 5555
+ :tcp-push-host "127.0.0.1"
+ :tcp-push-port 7777
+ :tcp-push-period 300000 ;; millis -> 5 minutes
+ :storage-default "/dev/disk1s1"
+ :network-default "en0"}
