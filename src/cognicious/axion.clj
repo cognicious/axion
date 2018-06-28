@@ -10,7 +10,8 @@
    [cognicious.system :as sys]))
 
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
-(def paused (atom false))
+(def paused-atm (atom false))
+(def config-atm (atom {}))
 
 (defn project-clj 
   "Returns project.clj into the JAR, otherwise, return local file"
@@ -39,37 +40,37 @@
 
 (defhandler info [request tx]
   (cond-> {:status 204}
-    (not @paused) (assoc :status 200
-                        :headers {"content-type" "application/json"}
-                        :body (sys/info))))
+    (not @paused-atm) (assoc :status 200
+                         :headers {"content-type" "application/json"}
+                         :body (sys/info @config-atm))))
 
 (defhandler info-raw [request tx]
   (cond-> {:status 204}
-    (not @paused) (assoc :status 200
-                        :headers {"content-type" "application/json"}
-                        :body (sys/info-raw))))
+    (not @paused-atm) (assoc :status 200
+                         :headers {"content-type" "application/json"}
+                         :body (sys/info-raw))))
 
 (defhandler index [request tx]
   (cond-> {:status 204}
-    (not @paused) (assoc :status 200 
-                        :headers {"content-type" "text/plain"} 
-                        :body "hello!")))
+    (not @paused-atm) (assoc :status 200 
+                         :headers {"content-type" "application/json"} 
+                         :body (json/write-str (name&version)))))
 
 (defhandler pause [request tx]
-  (reset! paused true)
+  (reset! paused-atm true)
   {:status 204})
 
 (defhandler restart [request tx]
-  (reset! paused false)
+  (reset! paused-atm false)
   {:status 200
    :headers {"content-type" "application/json"}
    :body (json/write-str {:status "restarted"})})
 
 (defhandler screenshot [request tx]
   (cond-> {:status 204}
-    (not @paused) (assoc :status 200
-                        :headers {"content-type" "image/png"}
-                        :body (screen/take))))
+    (not @paused-atm) (assoc :status 200
+                         :headers {"content-type" "image/png"}
+                         :body (screen/take))))
 
 (def handler
   (bidi/make-handler ["/" {"" index
@@ -81,6 +82,22 @@
 
 (defn -main
   [& args]
-  (let [server (http/start-server handler {:port 5555})]
+  (let [config (or (System/getProperty "axion.config") (io/resource "config.axn"))
+        _ (log/debug (pr-str {:reading-config config}))
+        {:keys [http-port
+                tcp-push-host
+                tcp-push-port
+                tcp-push-period
+                storage-default
+                network-default]
+         :as config} (read-string (slurp config))
+        _ (reset! config-atm config)
+        _ (log/debug (pr-str {:config config}))
+        server (http/start-server handler {:port http-port})]
     (log/info (pr-str {:starting (name&version)}))
+    (while [true]
+      (if-not @paused-atm
+        (-> (sys/info config)
+            (sys/send-data tcp-push-host tcp-push-port)))
+      (Thread/sleep tcp-push-period))
     (.wait-for-close server)))
