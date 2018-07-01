@@ -99,8 +99,8 @@
        :net-ipv4 (first (get net-interface :ipv4))
        :net-ipv6 (first (get net-interface :ipv6))
        :net-mtu (get net-interface :mtu)
-       :net-bytes-received (double (/ (get net-interface :bytesRecv 0) net-factor))
-       :net-bytes-sent     (double (/ (get net-interface :bytesSent 0) net-factor))
+       :net-mbytes-received (double (/ (get net-interface :bytesRecv 0) net-factor))
+       :net-mbytes-sent     (double (/ (get net-interface :bytesSent 0) net-factor))
        :net-speed          (double (/ (get net-interface :speed 0)     net-factor))
        :net-error-received (get net-interface :inErrors)
        :net-error-sent (get net-interface :outErrors)
@@ -116,7 +116,7 @@
   (try
     (with-open [d-socket (java.net.Socket. tcp-push-host tcp-push-port)
                 os (.getOutputStream d-socket)]
-      (.write os (.getBytes (pr-str data) "UTF-8"))
+      (.write os (.getBytes data "UTF-8"))
       (.write os 10))
     (catch Exception e
       (log/error (pr-str {:cause (-> e .getMessage)})))))
