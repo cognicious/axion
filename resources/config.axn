@@ -1,4 +1,4 @@
-{:http-port 5555
+{:http-port 8081
  :tcp-push-host "127.0.0.1"
  :tcp-push-port 7777
  :tcp-push-period 300000 ;; millis -> 5 minutes

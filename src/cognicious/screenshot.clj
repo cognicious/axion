@@ -5,6 +5,8 @@
   (:import 
    (java.awt GraphicsDevice GraphicsEnvironment Rectangle Robot)
    (java.awt.image BufferedImage)
+   (java.io ByteArrayOutputStream)
+   (java.util Base64)
    (javax.imageio ImageIO)))
 
 (defn make-rect []
@@ -22,3 +24,13 @@
           (.createScreenCapture rect)
           (ImageIO/write "png" os)))
     (io/file "./screenshot.png")))
+
+(defn take64 []
+  (let [rect (make-rect)
+        ]
+    (with-open [os (ByteArrayOutputStream.)]
+      (-> (Robot.)
+          (.createScreenCapture rect)
+          (ImageIO/write "png" os))
+      (.flush os)
+      (.encodeToString (Base64/getEncoder) (.toByteArray os)))))

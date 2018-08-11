@@ -3,6 +3,7 @@
   (:require
    [aleph.http :as http]
    [bidi.ring :as bidi]
+   [byte-streams :as bs]
    [clojure.data.json :as json]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
@@ -80,6 +81,25 @@
                            "restart" restart
                            "screenshot" screenshot}]))
 
+(defn pull-data [http-pull-url tcp-push-host tcp-push-port mac]
+  (try
+    (reduce
+     (fn [a [k v]]
+       (let [[_ f-mac] (re-matches #"\[:screen \"([a-z0-9:\-]+)\"\]" k)]
+         (if (= mac f-mac)
+           (-> v
+               (assoc :screenshot (screen/take64))
+               json/write-str
+               (sys/send-data tcp-push-host tcp-push-port)))))
+     nil
+     (-> @(http/request {:url http-pull-url
+                         :request-method "get"})
+         :body
+         bs/to-string
+         json/read-str))
+    (catch Exception e
+      (log/error e))))
+
 (defn -main
   [& args]
   (let [config (or (System/getProperty "axion.config") (io/resource "config.axn"))
@@ -88,6 +108,7 @@
                 tcp-push-host
                 tcp-push-port
                 tcp-push-period
+                http-pull-url
                 storage-default
                 network-default]
          :as config} (read-string (slurp config))
@@ -97,7 +118,11 @@
     (log/info (pr-str {:starting (name&version)}))
     (while [true]
       (if-not @paused-atm
-        (-> (sys/info config)
-            (sys/send-data tcp-push-host tcp-push-port)))
+        (let [info (sys/info config)
+              net-mac (:net-mac (json/read-str info :key-fn keyword))
+              _ (log/info {:net-mac net-mac})]
+          (sys/send-data info tcp-push-host tcp-push-port)
+          (if (and http-pull-url net-mac)
+            (pull-data http-pull-url tcp-push-host tcp-push-port net-mac))))
       (Thread/sleep tcp-push-period))
     (.wait-for-close server)))

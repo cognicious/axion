@@ -1,4 +1,4 @@
-(defproject cognicious/axion "0.1.0"
+(defproject cognicious/axion "0.1.2-SNAPSHOT"
   :description "Lightweight Cross-platform Monitoring Agent"
   :url "https://github.com/cognicious/axion"
   :license {:name "Eclipse Public License"
@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
                  ;; server info
-                 [com.github.oshi/oshi-json "3.6.0"]
+                 [com.github.oshi/oshi-json "3.7.2"]
                  ;; webserver
                  [aleph "0.4.6"]
                  [bidi "2.1.3"]
