@@ -110,7 +110,8 @@
                 tcp-push-period
                 http-pull-url
                 storage-default
-                network-default]
+                network-default
+                merge-data]
          :as config} (read-string (slurp config))
         _ (reset! config-atm config)
         _ (log/debug (pr-str {:config config}))
