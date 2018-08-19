@@ -1,4 +1,4 @@
-(defproject cognicious/axion "0.1.2-SNAPSHOT"
+(defproject cognicious/axion "0.1.3-SNAPSHOT"
   :description "Lightweight Cross-platform Monitoring Agent"
   :url "https://github.com/cognicious/axion"
   :license {:name "Eclipse Public License"

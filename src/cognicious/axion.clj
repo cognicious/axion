@@ -98,6 +98,7 @@
          bs/to-string
          json/read-str))
     (catch Exception e
+      (.printStackTrace e)
       (log/error e))))
 
 (defn -main
