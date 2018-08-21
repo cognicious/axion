@@ -13,6 +13,9 @@
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
 (def paused-atm (atom false))
 (def config-atm (atom {}))
+(def connection-pool (http/connection-pool
+                      {:connections-per-host 4
+                       :connection-options   {:keep-alive? true}}))
 
 (defn project-clj 
   "Returns project.clj into the JAR, otherwise, return local file"
@@ -93,7 +96,8 @@
                (sys/send-data tcp-push-host tcp-push-port)))))
      nil
      (-> @(http/request {:url http-pull-url
-                         :request-method "get"})
+                         :request-method "get"
+                         :pool connection-pool})
          :body
          bs/to-string
          json/read-str))
