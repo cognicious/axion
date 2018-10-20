@@ -1,0 +1,7 @@
+{:axn/server-port 8081
+ :axn/tcp-push-host "127.0.0.1"
+ :axn/tcp-push-port 7777
+ :axn/tcp-push-period 300000 ;; millis -> 5 minutes
+ :axn/storage-default "/dev/disk1s1"
+ :axn/network-default "en0"
+ :axn/http-poll-url "http://www.google.io/"}
