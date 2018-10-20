@@ -1,14 +1,12 @@
-(ns cognicious.system
+(ns cognicious.axion.system
   (:gen-class)
-  (:require
-   [clojure.data.json :as json]
-   [clojure.java.io :as io]
-   [clojure.tools.logging :as log]
-   [cognicious.screenshot :as screen])
-  (:import
-   (java.util Properties)
-   (oshi.json SystemInfo)
-   (oshi.util EdidUtil)))
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
+            [cognicious.axion.screenshot :as screen])
+  (:import (java.util Properties)
+           (oshi.json SystemInfo)
+           (oshi.util EdidUtil)))
 
 (def properties-filename "oshi.json.properties")
 

@@ -1,13 +1,11 @@
-(ns cognicious.screenshot
+(ns cognicious.axion.screenshot
   (:refer-clojure :exclude [take])
-  (:require
-   [clojure.java.io :as io])
-  (:import 
-   (java.awt GraphicsDevice GraphicsEnvironment Rectangle Robot)
-   (java.awt.image BufferedImage)
-   (java.io ByteArrayOutputStream)
-   (java.util Base64)
-   (javax.imageio ImageIO)))
+  (:require [clojure.java.io :as io])
+  (:import (java.awt GraphicsDevice GraphicsEnvironment Rectangle Robot)
+           (java.awt.image BufferedImage)
+           (java.io ByteArrayOutputStream)
+           (java.util Base64)
+           (javax.imageio ImageIO)))
 
 (defn make-rect []
   (reduce (fn [r gd]
