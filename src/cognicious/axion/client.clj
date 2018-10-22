@@ -22,13 +22,8 @@
       (sys/send-data tcp-push-host tcp-push-port)))
 
 (defn state-reducer [mac tcp-push-host tcp-push-port]
-  (fn [a [k v]]
-    (let [[_ f-mac] (re-matches #"\[:screen \"([a-z0-9:\-]+)\"\]" k)]
-      (if (= mac f-mac)
-        (-> v
-            (assoc :screenshot (screen/take64))
-            json/write-str
-            (sys/send-data tcp-push-host tcp-push-port))))))
+  (fn [a [key value]]
+    (state-command key value local-mac tcp-push-host tcp-push-port)))
 
 (defn retrieve-state [http-poll-url connection-pool]
   (-> @(http/request {:url http-poll-url
