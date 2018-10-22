@@ -10,6 +10,17 @@
                       {:connections-per-host 4
                        :connection-options   {:keep-alive? true}}))
 
+(defmulti state-command (fn [key value local-mac tcp-push-host tcp-push-port]
+                          (let [[_ command remote-mac] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-z0-9:\-]+)\"\]" key)]
+                            (when (and command (= local-mac remote-mac))
+                              (keyword command)))))
+
+(defmethod state-command :screen [key value local-mac tcp-push-host tcp-push-port]
+  (-> value
+      (assoc :screenshot (screen/take64))
+      json/write-str
+      (sys/send-data tcp-push-host tcp-push-port)))
+
 (defn state-reducer [mac tcp-push-host tcp-push-port]
   (fn [a [k v]]
     (let [[_ f-mac] (re-matches #"\[:screen \"([a-z0-9:\-]+)\"\]" k)]
