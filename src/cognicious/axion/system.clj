@@ -11,6 +11,7 @@
 (def properties-filename "oshi.json.properties")
 
 (defn make-properties
+  "Reads properties files"
   [properties-filename]
   (with-open [is (-> (io/resource properties-filename)
                      (io/input-stream))]
@@ -18,6 +19,7 @@
       (.load is))))
 
 (defn info-raw 
+  "Dispatches all system information using OSHI Properties"
   ([]
    (info-raw (SystemInfo.)))
   ([si]
@@ -28,41 +30,52 @@
      si .toString
      format-fn format-fn)))
 
-(defn usb-recursive-count [r {:keys [connectedDevices]}]
+(defn usb-recursive-count 
+  "Receives info map and counts usb devices"
+  [r {:keys [connectedDevices]}]
   (if (= 0 (count connectedDevices))
     (inc r)
     (reduce usb-recursive-count 
             r 
             connectedDevices)))
 
-(defn get-storage [info storage-name]
+(defn get-storage 
+  "Receives info map and optional store-name and returns a storage info"
+  [info storage-name]
   (let [storages (get-in info [:operatingSystem :fileSystem :fileStores])]
-    (if storage-name
-      (reduce (fn [r {:keys [name volume] :as i}] 
-                (if (or (= name storage-name)
-                        (= volume storage-name))
-                  (reduced i)
-                  r))
-              nil
-              storages)
-      (first storages))))
+    (reduce (fn [r {:keys [name volume totalSpace] :as i}] 
+                (if storage-name
+                  (if (or (= name storage-name)
+                          (= volume storage-name))
+                    (reduced i)
+                    r)
+                  (if (not (zero? totalSpace))
+                    (reduced i)
+                    r)))
+            nil
+            storages)))
 
 (defn get-interface [info network-name]
+  "Receives info map and optional store-name and returns a network info"
   (let [interfaces (get-in info [:hardware :networks])]
-    (if network-name
-      (reduce (fn [r {:keys [name displayName] :as i}] 
-                (if (or (= name network-name)
-                        (= displayName network-name))
-                  (reduced i)
-                  r))
+    (reduce (fn [r {:keys [name displayName packetsRecv packetsSent] :as i}] 
+                (if network-name
+                  (if (or (= name network-name)
+                          (= displayName network-name))
+                    (reduced i)
+                    r)
+                  (if (and (not (zero? packetsRecv))
+                           (not (zero? packetsSent)))
+                    (reduced i)
+                    r)))
               nil
-              interfaces)
-      (first interfaces))))
+              interfaces)))
 
 (defn info 
+  "Dispatches tiny version of system information"
   ([]
    (info {}))
-  ([{:keys [storage-default network-default merge-data] :as config}]
+  ([{:axn/keys [storage-default network-default merge-data] :as config}]
    (let [sys-info (SystemInfo.)
          info (info-raw sys-info #(json/read-str % :key-fn keyword))
          ;; defaults
