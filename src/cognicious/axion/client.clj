@@ -21,7 +21,7 @@
       json/write-str
       (sys/send-data tcp-push-host tcp-push-port)))
 
-(defn state-reducer [mac tcp-push-host tcp-push-port]
+(defn state-reducer [local-mac tcp-push-host tcp-push-port]
   (fn [a [key value]]
     (state-command key value local-mac tcp-push-host tcp-push-port)))
 
