@@ -12,6 +12,12 @@
             [cognicious.axion.system :as sys]))
 
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
+(def default-config {:axn/server-host "localhost"
+                     :axn/server-port 8081
+                     :axn/tcp-push-host "axion.cognicio.us"
+                     :axn/tcp-push-port 7777
+                     :axn/tcp-push-period 300000
+                     :axn/http-poll-url "http://axion.cognicio.us/"})
 
 (defn project-clj 
   "Returns project.clj into the JAR, otherwise, return local file"
@@ -38,11 +44,24 @@
    (Runtime/getRuntime)
    (Thread. #(log/info (pr-str {:stop app})))))
 
-(defn get-config [path]
+(defn create-config! 
+  "Create default configuration file"
+  [path]
+  (try
+    (log/info (pr-str {:message "Creating default configuration file" :path path}))
+    (spit path default-config)
+    default-config
+    (catch Exception e
+      (log/fatal (pr-str {:message (.getMessage e)})))))
+
+(defn get-config 
+  "Retrieves configuration file"
+  [path]
   (try 
     (read-string (slurp path))
     (catch Exception e
-      (log/fatal (pr-str {:message (.getMessage e)})))))
+      (log/warn (pr-str {:message (.getMessage e)}))
+      (create-config! path))))
 
 (defn valid-url? [string]
   #(re-matches #"^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" string))
@@ -92,7 +111,7 @@
             (if-not @server/paused-atm
               (let [info (sys/info config)
                     net-mac (:net-mac (json/read-str info :key-fn keyword))
-                    _ (log/info {:net-mac net-mac})]
+                    _ (log/debug {:net-mac net-mac})]
                 (sys/send-data info tcp-push-host tcp-push-port)
                 (if (and http-pull-url net-mac)
                   (client/poll-state http-pull-url tcp-push-host tcp-push-port net-mac))))
