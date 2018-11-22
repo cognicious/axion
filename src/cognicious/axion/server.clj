@@ -55,7 +55,7 @@
 
 (defn start-server [{:axn/keys [server-host server-port]
                      :or {server-host "0.0.0.0" 
-                          server-port "8081"} 
+                          server-port 8081} 
                      :as config}]
   (log/info (pr-str {:start-server [server-host server-port]}))
   (reset! config-atm config)
@@ -66,5 +66,4 @@
                             "pause" pause
                             "restart" restart
                             "screenshot" screenshot}])
-   (clojure.set/rename-keys config
-                            {:axn/server-port :port :axn/server-host :socket-address})))
+   {:socket-address (java.net.InetSocketAddress. server-host server-port)}))
