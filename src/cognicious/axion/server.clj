@@ -28,14 +28,16 @@
 (defhandler info-raw [request tx]
   (cond-> {:status 204}
     (not @paused-atm) (assoc :status 200
-                         :headers {"content-type" "application/json"}
-                         :body (sys/info-raw))))
+                             :headers {"content-type" "application/json"}
+                             :body (sys/info-raw))))
 
-(defhandler index [request tx]
-  (cond-> {:status 204}
-    (not @paused-atm) (assoc :status 200 
-                         :headers {"content-type" "application/json"} 
-                         :body (json/write-str ""))))
+(defn index-factory [app uuid]
+  (defhandler index [request tx]
+    (cond-> {:status 204}
+      (not @paused-atm) (assoc :status 200 
+                               :headers {"content-type" "application/json"} 
+                               :body (json/write-str {:app app 
+                                                      :uuid (str uuid)})))))
 
 (defhandler pause [request tx]
   (reset! paused-atm true)
@@ -53,14 +55,15 @@
                          :headers {"content-type" "image/png"}
                          :body (screen/take))))
 
-(defn start-server [{:axn/keys [server-host server-port]
+(defn start-server [{:axn/keys [server-host server-port uuid]
                      :or {server-host "0.0.0.0" 
                           server-port 8081} 
-                     :as config}]
+                     :as config}
+                    app ]
   (log/info (pr-str {:start-server [server-host server-port]}))
   (reset! config-atm config)
   (http/start-server 
-   (bidi/make-handler ["/" {"" index
+   (bidi/make-handler ["/" {"" (index-factory app uuid)
                             "info" info
                             "info-raw" info-raw
                             "pause" pause
