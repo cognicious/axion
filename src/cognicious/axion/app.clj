@@ -12,10 +12,11 @@
             [cognicious.axion.system :as sys]))
 
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
-(def default-config {:axn/server-host "localhost"
+(def default-config {:axn/uuid (java.util.UUID/randomUUID)
+                     :axn/server-host "localhost"
                      :axn/server-port 8081
                      :axn/tcp-push-host "axion.cognicio.us"
-                     :axn/tcp-push-port 7777
+                     :axn/tcp-push-port 9999
                      :axn/tcp-push-period 300000
                      :axn/http-poll-url "http://axion.cognicio.us/"})
 
@@ -66,6 +67,7 @@
 (defn valid-url? [string]
   #(re-matches #"^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" string))
 
+(spec/def :axn/uuid uuid?)
 (spec/def :axn/server-host string?)
 (spec/def :axn/server-port (spec/and number? #(<= 0 % 65535)))
 (spec/def :axn/tcp-push-host string?)
@@ -75,7 +77,8 @@
 (spec/def :axn/merge-data map?)
 (spec/def :axn/storage-default string?)
 (spec/def :axn/network-default string?)
-(spec/def :axn/config (spec/keys :req [:axn/server-port
+(spec/def :axn/config (spec/keys :req [:axn/uuid
+                                       :axn/server-port
                                        :axn/tcp-push-host
                                        :axn/tcp-push-port
                                        :axn/tcp-push-period
@@ -106,7 +109,7 @@
                       merge-data]
            :as config} (get-config path)]
       (if (spec/valid? :axn/config config)
-        (let [server (server/start-server config)] 
+        (let [server (server/start-server config app)] 
           (while [true]
             (if-not @server/paused-atm
               (let [info (sys/info config)
