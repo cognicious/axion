@@ -15,10 +15,8 @@
 (def default-config {:axn/uuid (java.util.UUID/randomUUID)
                      :axn/server-host "localhost"
                      :axn/server-port 8081
-                     :axn/tcp-push-host "axion.cognicio.us"
-                     :axn/tcp-push-port 9999
-                     :axn/tcp-push-period 300000
-                     :axn/http-poll-url "http://axion.cognicio.us/"})
+                     :axn/push-period 10000
+                     :axn/streamer "http://axion.cognicio.us"})
 
 (defn project-clj 
   "Returns project.clj into the JAR, otherwise, return local file"
@@ -70,19 +68,15 @@
 (spec/def :axn/uuid uuid?)
 (spec/def :axn/server-host string?)
 (spec/def :axn/server-port (spec/and number? #(<= 0 % 65535)))
-(spec/def :axn/tcp-push-host string?)
-(spec/def :axn/tcp-push-port (spec/and number? #(<= 0 % 65535)))
-(spec/def :axn/tcp-push-period number?)
-(spec/def :axn/http-poll-url (spec/and string? valid-url?))
+(spec/def :axn/push-period number?)
+(spec/def :axn/streamer (spec/and string? valid-url?))
 (spec/def :axn/merge-data map?)
 (spec/def :axn/storage-default string?)
 (spec/def :axn/network-default string?)
 (spec/def :axn/config (spec/keys :req [:axn/uuid
                                        :axn/server-port
-                                       :axn/tcp-push-host
-                                       :axn/tcp-push-port
-                                       :axn/tcp-push-period
-                                       :axn/http-poll-url] 
+                                       :axn/push-period
+                                       :axn/streamer]
                                  :opt [:axn/server-host 
                                        :axn/merge-data
                                        :axn/storage-default
@@ -99,24 +93,27 @@
     (doall (map #(log/info %) (banner)))
     (log/info (pr-str {:start app}))
     (log/info (pr-str {:reading-config-file path}))
-    (let [{:axn/keys [http-port
-                      tcp-push-host
-                      tcp-push-port
-                      tcp-push-period
-                      http-pull-url
+    (let [{:axn/keys [server-host
+                      server-port
+                      push-period
+                      streamer
                       storage-default
                       network-default
                       merge-data]
+           :or {server-host "localhost"}
            :as config} (get-config path)]
       (if (spec/valid? :axn/config config)
-        (let [server (server/start-server config app)] 
+        (let [server (server/start-server config app)
+              streamer-push-url (str streamer ":9999/event")
+              streamer-poll-url (str streamer ":10000/state/http-streamers")]
           (while [true]
             (if-not @server/paused-atm
               (let [info (sys/info config)
+                    _ (log/debug info)
                     net-mac (:net-mac (json/read-str info :key-fn keyword))
                     _ (log/debug {:net-mac net-mac})]
-                (sys/send-data info tcp-push-host tcp-push-port)
-                (if (and http-pull-url net-mac)
-                  (client/poll-state http-pull-url tcp-push-host tcp-push-port net-mac))))
-            (Thread/sleep tcp-push-period)))
+                (sys/send-data info streamer-push-url)
+                (if net-mac
+                  (client/poll-state streamer-push-url streamer-poll-url net-mac))))
+            (Thread/sleep push-period)))
         (log/fatal (spec/explain-str :axn/config config))))))
