@@ -1,6 +1,8 @@
 (ns cognicious.axion.system
   (:gen-class)
-  (:require [clojure.data.json :as json]
+  (:require [aleph.http :as http]
+            [byte-streams :as bs]
+            [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [cognicious.axion.screenshot :as screen])
@@ -124,7 +126,21 @@
                                     (get-in info [:hardware :usbDevices]))}
        merge-data)))))
 
-(defn send-data [data tcp-push-host tcp-push-port]
+(defn body->edn [response]
+  (-> response :body bs/to-string (json/read-str :key-fn keyword)))
+
+(defn send-data [data url]
+  (log/info (pr-str {:sending-data-to url}))
+  (try
+    (-> @(http/request {:url url
+                        :request-method "post"
+                        :body data})
+        print)
+    (catch clojure.lang.ExceptionInfo e
+      (.printStackTrace e)
+      (-> e .getData body->edn))))
+
+#_(defn send-data [data tcp-push-host tcp-push-port]
   (log/info (pr-str {:sending-data-to [tcp-push-host tcp-push-port]}))
   (try
     (with-open [d-socket (java.net.Socket. tcp-push-host tcp-push-port)
