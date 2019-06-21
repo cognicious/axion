@@ -134,7 +134,8 @@
   (try
     (-> @(http/request {:url url
                         :request-method "post"
-                        :body data})
+                        :body data
+                        :headers {"content-type" "application/json"}})
         print)
     (catch clojure.lang.ExceptionInfo e
       (.printStackTrace e)
