@@ -36,7 +36,7 @@
     (cond-> {:status 204}
       (not @paused-atm) (assoc :status 200 
                                :headers {"content-type" "application/json"} 
-                               :body (json/write-str {:app app 
+                               :body (json/write-str {:app app
                                                       :uuid (str uuid)})))))
 
 (defhandler pause [request tx]
