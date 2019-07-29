@@ -11,8 +11,11 @@
             [cognicious.axion.server :as server]
             [cognicious.axion.system :as sys]))
 
+(defn rand-str [len]
+  (apply str (take len (repeatedly #(char (+ (rand 26) 65))))))
+
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
-(def default-config {:axn/uuid (java.util.UUID/randomUUID)
+(def default-config {:axn/id (rand-str 6)
                      :axn/server-host "localhost"
                      :axn/server-port 8081
                      :axn/push-period 10000
@@ -65,7 +68,7 @@
 (defn valid-url? [string]
   #(re-matches #"^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" string))
 
-(spec/def :axn/uuid uuid?)
+(spec/def :axn/id string?)
 (spec/def :axn/server-host string?)
 (spec/def :axn/server-port (spec/and number? #(<= 0 % 65535)))
 (spec/def :axn/push-period number?)
@@ -73,7 +76,7 @@
 (spec/def :axn/merge-data map?)
 (spec/def :axn/storage-default string?)
 (spec/def :axn/network-default string?)
-(spec/def :axn/config (spec/keys :req [:axn/uuid
+(spec/def :axn/config (spec/keys :req [:axn/id
                                        :axn/server-port
                                        :axn/push-period
                                        :axn/streamer]
