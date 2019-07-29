@@ -3,6 +3,7 @@
             [byte-streams :as bs]
             [clojure.data.json :as json]
             [clojure.tools.logging :as log]
+            [cognicious.axion.config :as conf]
             [cognicious.axion.screenshot :as screen]
             [cognicious.axion.system :as sys]))
 
@@ -10,23 +11,32 @@
                       {:connections-per-host 4
                        :connection-options   {:keep-alive? true}}))
 
-(defmulti state-command (fn [key value local-mac streamer-push-url]
-                          (let [[_ command remote-mac] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-z0-9:\-]+)\"\]" key)]
-                            (when (and command (= local-mac remote-mac))
+(defmulti state-command (fn [key value id streamer-push-url]
+                          (let [[_ command remote-id] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-zA-Z0-9:\-]+)\"\]" (name key))]
+                            (when (and command (= id remote-id))
                               (keyword command)))))
 
-(defmethod state-command :screen [key value local-mac streamer-push-url]
+(defmethod state-command :screen [key value id streamer-push-url]
   (-> value
       (assoc :screenshot (screen/take64))
       json/write-str
       (sys/send-data streamer-push-url)))
 
-(defmethod state-command :default [_ _ _ _]
-  (log/debug "Nothing to do ..."))
+(defmethod state-command :config [key value id _]
+  (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
+        current (-> path slurp read-string)
+        value (dissoc value :caudal/created :caudal/touched :remote-addr)]
+    (when-not (= current value)
+      (log/warn (pr-str {:config-replace value}))
+      (spit conf/path value))))
 
-(defn state-reducer [local-mac streamer-push-url]
+(defmethod state-command :default [key _ _ _]
+  (log/debug "Nothing to do ... " (pr-str key)))
+
+(defn state-reducer [id streamer-push-url]
   (fn [a [key value]]
-    (state-command key value local-mac streamer-push-url)))
+    (log/debug :state-reducer (pr-str [key value]))
+    (state-command key value id streamer-push-url)))
 
 (defn retrieve-state [http-poll-url connection-pool]
   (-> @(http/request {:url http-poll-url
@@ -34,12 +44,12 @@
                       :pool connection-pool})
       :body
       bs/to-string
-      json/read-str))
+      (json/read-str :key-fn keyword)))
 
-(defn poll-state [streamer-push-url streamer-poll-url mac]
+(defn poll-state [streamer-push-url streamer-poll-url id]
   (try
     (reduce
-     (state-reducer mac streamer-push-url)
+     (state-reducer id streamer-push-url)
      nil
      (retrieve-state streamer-poll-url connection-pool))
     (catch Exception e
