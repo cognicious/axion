@@ -77,7 +77,7 @@
   "Dispatches tiny version of system information"
   ([]
    (info {}))
-  ([{:axn/keys [storage-default network-default merge-data] :as config}]
+  ([{:axn/keys [id storage-default network-default merge-data] :as config}]
    (let [sys-info (SystemInfo.)
          info (info-raw sys-info #(json/read-str % :key-fn keyword))
          ;; defaults
@@ -88,7 +88,8 @@
          net-factor (* 1024 1024)]
      (json/write-str
       (merge
-       {:os-platform (get-in info [:platform])
+       {:id id
+        :os-platform (get-in info [:platform])
         :os-version (get-in info [:operatingSystem :version :version])
         :os-build (get-in info [:operatingSystem :version :build])
         :os-storage-name (get os-storage :name "Not configured")
@@ -130,16 +131,30 @@
   (-> response :body bs/to-string (json/read-str :key-fn keyword)))
 
 (defn send-data [data url]
-  (log/info (pr-str {:sending-data-to url}))
+  (log/debug (pr-str {:sending-data-to url}))
   (try
     (-> @(http/request {:url url
                         :request-method "post"
                         :body data
-                        :headers {"content-type" "application/json"}})
-        print)
+                        :headers {"content-type" "application/json"}}))
     (catch clojure.lang.ExceptionInfo e
+      (log/warn (pr-str {:send-data (.getMessage e)}))
       (.printStackTrace e)
       (-> e .getData body->edn))))
+
+(defn send-config [url]
+  (try 
+    (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
+          data (-> path slurp read-string)]
+      (-> @(http/request {:url url
+                          :request-method "post"
+                          :body (pr-str data)
+                          :headers {"content-type" "application/edn"}})))
+    (catch Exception e
+      (.printStackTrace e)
+      (log/warn (pr-str {:send-config (.getMessage e)})))))
+
+
 
 #_(defn send-data [data tcp-push-host tcp-push-port]
   (log/info (pr-str {:sending-data-to [tcp-push-host tcp-push-port]}))
