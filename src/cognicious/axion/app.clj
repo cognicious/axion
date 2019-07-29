@@ -8,18 +8,11 @@
             [clojure.string :as s]
             [clojure.tools.logging :as log]
             [cognicious.axion.client :as client]
+            [cognicious.axion.config :as conf]
             [cognicious.axion.server :as server]
             [cognicious.axion.system :as sys]))
 
-(defn rand-str [len]
-  (apply str (take len (repeatedly #(char (+ (rand 26) 65))))))
-
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
-(def default-config {:axn/id (rand-str 6)
-                     :axn/server-host "localhost"
-                     :axn/server-port 8081
-                     :axn/push-period 10000
-                     :axn/streamer "http://axion.cognicio.us"})
 
 (defn project-clj 
   "Returns project.clj into the JAR, otherwise, return local file"
@@ -46,57 +39,28 @@
    (Runtime/getRuntime)
    (Thread. #(log/info (pr-str {:stop app})))))
 
-(defn create-config! 
-  "Create default configuration file"
-  [path]
-  (try
-    (log/info (pr-str {:message "Creating default configuration file" :path path}))
-    (spit path default-config)
-    default-config
-    (catch Exception e
-      (log/fatal (pr-str {:message (.getMessage e)})))))
-
-(defn get-config 
-  "Retrieves configuration file"
-  [path]
-  (try 
-    (read-string (slurp path))
-    (catch Exception e
-      (log/warn (pr-str {:message (.getMessage e)}))
-      (create-config! path))))
-
-(defn valid-url? [string]
-  #(re-matches #"^(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" string))
-
-(spec/def :axn/id string?)
-(spec/def :axn/server-host string?)
-(spec/def :axn/server-port (spec/and number? #(<= 0 % 65535)))
-(spec/def :axn/push-period number?)
-(spec/def :axn/streamer (spec/and string? valid-url?))
-(spec/def :axn/merge-data map?)
-(spec/def :axn/storage-default string?)
-(spec/def :axn/network-default string?)
-(spec/def :axn/config (spec/keys :req [:axn/id
-                                       :axn/server-port
-                                       :axn/push-period
-                                       :axn/streamer]
-                                 :opt [:axn/server-host 
-                                       :axn/merge-data
-                                       :axn/storage-default
-                                       :axn/network-default]))
-(spec/fdef get-config
-           :args (spec/cat :path string?) 
-           :ret :axn/config)
+(defn draw []
+  (let [{:axn/keys [id]} @conf/config]
+    (doto (javax.swing.JFrame. ":axion/id")
+      (.setContentPane (doto (proxy [javax.swing.JPanel] []
+                               (paint [^java.awt.Graphics g]
+                                 (let [curr-font (-> g (.getFont))
+                                       new-font (-> curr-font (.deriveFont (* (.getSize curr-font) 3.0)))]
+                                   (.setFont g new-font)
+                                   (.drawString g id 50 50))))
+                         (.setPreferredSize (java.awt.Dimension. 300 150))))
+      (.pack)
+      (.setVisible true)
+      (.setState (javax.swing.JFrame/ICONIFIED)))))
 
 (defn -main
   [& args]
   (let [app (name-version)
-        _ (shutdown-hook app)
-        path (.getCanonicalPath (clojure.java.io/file "./config.edn"))]
+        _ (shutdown-hook app)]
     (doall (map #(log/info %) (banner)))
     (log/info (pr-str {:start app}))
-    (log/info (pr-str {:reading-config-file path}))
-    (let [{:axn/keys [server-host
+    (let [{:axn/keys [id
+                      server-host
                       server-port
                       push-period
                       streamer
@@ -104,19 +68,27 @@
                       network-default
                       merge-data]
            :or {server-host "localhost"}
-           :as config} (get-config path)]
-      (if (spec/valid? :axn/config config)
-        (let [server (server/start-server config app)
-              streamer-push-url (str streamer ":9999/event")
-              streamer-poll-url (str streamer ":10000/state/http-streamers")]
+           :as config} (conf/get-config!)]
+      (let [server (server/start-server config app)
+            streamer-push-url (str streamer ":9999/event")
+            streamer-poll-url (str streamer ":10000/state/http-streamers")
+            _ (draw)]
           (while [true]
             (if-not @server/paused-atm
-              (let [info (sys/info config)
-                    _ (log/debug info)
-                    net-mac (:net-mac (json/read-str info :key-fn keyword))
-                    _ (log/debug {:net-mac net-mac})]
+              (let [{:axn/keys [id
+                                server-host
+                                server-port
+                                push-period
+                                streamer
+                                storage-default
+                                network-default
+                                merge-data]
+                     :or {server-host "localhost"}
+                     :as config} (conf/get-config!)
+                    info (sys/info config)
+                    _ (log/debug info)]
                 (sys/send-data info streamer-push-url)
-                (if net-mac
-                  (client/poll-state streamer-push-url streamer-poll-url net-mac))))
-            (Thread/sleep push-period)))
-        (log/fatal (spec/explain-str :axn/config config))))))
+                (sys/send-config streamer-push-url)
+                (if id
+                  (client/poll-state streamer-push-url streamer-poll-url id))))
+            (Thread/sleep push-period))))))
