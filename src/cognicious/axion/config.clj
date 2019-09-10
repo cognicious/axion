@@ -35,9 +35,8 @@
   "Retrieves configuration file"
   []
   (try 
-    (or @config
-        (log/warn (pr-str {:reading path}))
-        (reset! config (read-string (slurp path))))
+    (log/warn (pr-str {:reading path}))
+    (reset! config (read-string (slurp path)))
     (catch Exception e
       (log/warn (pr-str {:message (.getMessage e)}))
       (create-config!))))
