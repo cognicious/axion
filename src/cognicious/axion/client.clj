@@ -19,13 +19,15 @@
 (defmethod state-command :screen [key value id streamer-push-url]
   (-> value
       (assoc :screenshot (screen/take64))
-      json/write-str
+      (json/write-str :key-fn #(str (.-sym %)))
       (sys/send-data streamer-push-url)))
 
 (defmethod state-command :config [key value id _]
   (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
         current (-> path slurp read-string)
-        value (dissoc value :caudal/created :caudal/touched :remote-addr)]
+        _ (log/debug (pr-str {:current current}))
+        value (dissoc value :caudal/created :caudal/touched :remote-addr)
+        _ (log/debug (pr-str {:online value}))]
     (when-not (= current value)
       (log/warn (pr-str {:config-replace value}))
       (spit conf/path value))))
@@ -53,5 +55,4 @@
      nil
      (retrieve-state streamer-poll-url connection-pool))
     (catch Exception e
-      (.printStackTrace e)
       (log/error e))))
