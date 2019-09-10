@@ -74,21 +74,25 @@
             streamer-poll-url (str streamer ":10000/state/http-streamers")
             _ (draw)]
           (while [true]
-            (if-not @server/paused-atm
-              (let [{:axn/keys [id
-                                server-host
-                                server-port
-                                push-period
-                                streamer
-                                storage-default
-                                network-default
-                                merge-data]
-                     :or {server-host "localhost"}
-                     :as config} (conf/get-config!)
-                    info (sys/info config)
-                    _ (log/debug info)]
-                (sys/send-data info streamer-push-url)
-                (sys/send-config streamer-push-url)
-                (if id
-                  (client/poll-state streamer-push-url streamer-poll-url id))))
+            (try
+              (if-not @server/paused-atm
+                (let [{:axn/keys [id
+                                  server-host
+                                  server-port
+                                  push-period
+                                  streamer
+                                  storage-default
+                                  network-default
+                                  merge-data]
+                       :or {server-host "localhost"}
+                       :as config} (conf/get-config!)
+                      info (sys/info config)
+                      _ (log/debug info)]
+                  (if id
+                    (client/poll-state streamer-push-url streamer-poll-url id))
+                  (sys/send-data info streamer-push-url)
+                  (sys/send-config streamer-push-url)
+                  ))
+              (catch Throwable t
+                (log/warn {:previous-errors (.getMessage t)})))
             (Thread/sleep push-period))))))
