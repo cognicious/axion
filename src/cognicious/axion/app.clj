@@ -12,6 +12,7 @@
             [cognicious.axion.server :as server]
             [cognicious.axion.system :as sys]))
 
+(def error (atom ""))
 (def meta-project "META-INF/leiningen/cognicious/axion/project.clj")
 
 (defn project-clj 
@@ -41,17 +42,24 @@
 
 (defn draw []
   (let [{:axn/keys [id]} @conf/config]
+    (javax.swing.UIManager/setLookAndFeel (javax.swing.UIManager/getCrossPlatformLookAndFeelClassName))
     (doto (javax.swing.JFrame. ":axion/id")
       (.setContentPane (doto (proxy [javax.swing.JPanel] []
                                (paint [^java.awt.Graphics g]
                                  (let [curr-font (-> g (.getFont))
-                                       new-font (-> curr-font (.deriveFont (* (.getSize curr-font) 3.0)))]
-                                   (.setFont g new-font)
-                                   (.drawString g id 50 50))))
+                                       big-font (-> curr-font (.deriveFont (* (.getSize curr-font) 3.0)))
+                                       small-font (-> curr-font (.deriveFont (* (.getSize curr-font) 0.7)))]
+                                   (.setRenderingHint g java.awt.RenderingHints/KEY_TEXT_ANTIALIASING
+                                                        java.awt.RenderingHints/VALUE_TEXT_ANTIALIAS_LCD_HRGB)
+                                   (.setFont g big-font)
+                                   (.drawString g id 20 50)
+                                   (.setFont g small-font)
+                                   (.drawString g @error 20 100))))
                          (.setPreferredSize (java.awt.Dimension. 300 150))))
+      (.setDefaultCloseOperation javax.swing.JFrame/DO_NOTHING_ON_CLOSE)
+      (.setState javax.swing.JFrame/ICONIFIED)
       (.pack)
-      (.setVisible true)
-      (.setState (javax.swing.JFrame/ICONIFIED)))))
+      (.setVisible true))))
 
 (defn -main
   [& args]
@@ -72,7 +80,7 @@
       (let [server (server/start-server config app)
             streamer-push-url (str streamer ":9999/event")
             streamer-poll-url (str streamer ":10000/state/http-streamers")
-            _ (draw)]
+            window (draw)]
           (while [true]
             (try
               (if-not @server/paused-atm
@@ -92,7 +100,11 @@
                     (client/poll-state streamer-push-url streamer-poll-url id))
                   (sys/send-data info streamer-push-url)
                   (sys/send-config streamer-push-url)
-                  ))
+                  (when-not (= @error "Online")                    
+                    (reset! error "Online"))))
               (catch Throwable t
-                (log/warn {:previous-errors (.getMessage t)})))
+                (reset! error (.getMessage t))
+                (log/warn {:previous-errors (.getMessage t)}))
+              (finally
+                (javax.swing.SwingUtilities/updateComponentTreeUI window)))
             (Thread/sleep push-period))))))
