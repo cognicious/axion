@@ -127,35 +127,6 @@
                                     (get-in info [:hardware :usbDevices]))}
        merge-data)))))
 
-(defn body->edn [response]
-  (-> response :body bs/to-string (json/read-str :key-fn keyword)))
-
-(defn send-data [data url]
-  (log/debug (pr-str {:sending-data-to url}))
-  (try
-    (-> @(http/request {:url url
-                        :request-method "post"
-                        :body data
-                        :headers {"content-type" "application/json"}}))
-    (catch clojure.lang.ExceptionInfo e
-      (log/warn (pr-str {:send-data (.getMessage e)}))
-      (.printStackTrace e)
-      (-> e .getData body->edn))))
-
-(defn send-config [url]
-  (try 
-    (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
-          data (-> path slurp read-string)]
-      (-> @(http/request {:url url
-                          :request-method "post"
-                          :body (pr-str data)
-                          :headers {"content-type" "application/edn"}})))
-    (catch Exception e
-      (.printStackTrace e)
-      (log/warn (pr-str {:send-config (.getMessage e)})))))
-
-
-
 #_(defn send-data [data tcp-push-host tcp-push-port]
   (log/info (pr-str {:sending-data-to [tcp-push-host tcp-push-port]}))
   (try

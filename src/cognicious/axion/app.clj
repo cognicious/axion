@@ -1,7 +1,6 @@
 (ns cognicious.axion.app
   (:gen-class)
-  (:require [aleph.http :as http]
-            [bidi.ring :as bidi]
+  (:require [bidi.ring :as bidi]
             [clojure.data.json :as json]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as spec]
@@ -98,8 +97,8 @@
                       _ (log/debug info)]
                   (if id
                     (client/poll-state streamer-push-url streamer-poll-url id))
-                  (sys/send-data info streamer-push-url)
-                  (sys/send-config streamer-push-url)
+                  (client/send-data info streamer-push-url)
+                  (client/send-config streamer-push-url)
                   (when-not (= @error "Online")                    
                     (reset! error "Online"))))
               (catch Throwable t

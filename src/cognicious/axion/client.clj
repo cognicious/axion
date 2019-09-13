@@ -4,12 +4,42 @@
             [clojure.data.json :as json]
             [clojure.tools.logging :as log]
             [cognicious.axion.config :as conf]
-            [cognicious.axion.screenshot :as screen]
-            [cognicious.axion.system :as sys]))
+            [cognicious.axion.screenshot :as screen]))
 
 (def connection-pool (http/connection-pool
-                      {:connections-per-host 4
+                      {:connections-per-host 4                       
                        :connection-options   {:keep-alive? true}}))
+
+(defn body->edn [response]
+  (-> response :body bs/to-string (json/read-str :key-fn keyword)))
+
+(defn send-data [data url]
+  (log/debug (pr-str {:sending-data-to url}))
+  (try
+    (-> @(http/request {:url url
+                        :request-method "post"
+                        :request-timeout 5000
+                        :pool connection-pool
+                        :body data
+                        :headers {"content-type" "application/json"}}))
+    (catch clojure.lang.ExceptionInfo e
+      (log/warn (pr-str {:send-data (.getMessage e)}))
+      (.printStackTrace e)
+      (-> e .getData body->edn))))
+
+(defn send-config [url]
+  (try 
+    (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
+          data (-> path slurp read-string)]
+      (-> @(http/request {:url url
+                          :request-method "post"
+                          :request-timeout 5000
+                          :pool connection-pool
+                          :body (pr-str data)
+                          :headers {"content-type" "application/edn"}})))
+    (catch Exception e
+      (.printStackTrace e)
+      (log/warn (pr-str {:send-config (.getMessage e)})))))
 
 (defmulti state-command (fn [key value id streamer-push-url]
                           (let [[_ command remote-id] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-zA-Z0-9:\-]+)\"\]" (name key))]
@@ -20,7 +50,7 @@
   (-> value
       (assoc :screenshot (screen/take64))
       (json/write-str :key-fn #(str (.-sym %)))
-      (sys/send-data streamer-push-url)))
+      (send-data streamer-push-url)))
 
 (defmethod state-command :config [key value id _]
   (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
@@ -43,6 +73,7 @@
 (defn retrieve-state [http-poll-url connection-pool]
   (-> @(http/request {:url http-poll-url
                       :request-method "get"
+                      :request-timeout 5000
                       :pool connection-pool})
       :body
       bs/to-string
