@@ -10,9 +10,17 @@
 
 ## 0.1.3 - 2018-08-21
 ### Added
-- HTTP connection poll
+- HTTP connection pool
 
 ## 0.2.0 - 2018-10-19
 ### Changed
 - Complete refactory of namespaces
 - Clojure 1.9
+
+## 0.2.5 - 2019-09-29
+- New errors handling mechanism
+- No GUI compatibility
+- Replaces plain with encrypted communicacions
+- HTTPS connection pool
+- Unix start script
+- Upgrades OSHI 3.9.1 with 4.0.0
