@@ -3,11 +3,12 @@
   (:require [aleph.http :as http]
             [byte-streams :as bs]
             [clojure.data.json :as json]
+            [clojure.java.data :refer [from-java]]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [cognicious.axion.screenshot :as screen])
   (:import (java.util Properties)
-           (oshi.json SystemInfo)
+           (oshi SystemInfo)
            (oshi.util EdidUtil)))
 
 (def properties-filename "oshi.json.properties")
@@ -25,12 +26,8 @@
   ([]
    (info-raw (SystemInfo.)))
   ([si]
-   (info-raw si nil))
-  ([si format-fn]
-   (cond-> si 
-     si (.toJSON (make-properties properties-filename)) 
-     si .toString
-     format-fn format-fn)))
+   (-> (from-java si)
+       (assoc :platform (str (oshi.SystemInfo/getCurrentPlatformEnum))))))
 
 (defn usb-recursive-count 
   "Receives info map and counts usb devices"
@@ -59,7 +56,8 @@
 
 (defn get-interface [info network-name]
   "Receives info map and optional store-name and returns a network info"
-  (let [interfaces (get-in info [:hardware :networks])]
+  (let [interfaces (get-in info [:hardware :networkIFs])]
+    (log/info {:before interfaces})
     (reduce (fn [r {:keys [name displayName packetsRecv packetsSent] :as i}] 
                 (if network-name
                   (if (or (= name network-name)
@@ -79,10 +77,11 @@
    (info {}))
   ([{:axn/keys [id storage-default network-default merge-data] :as config}]
    (let [sys-info (SystemInfo.)
-         info (info-raw sys-info #(json/read-str % :key-fn keyword))
+         info (info-raw sys-info)
          ;; defaults
          os-storage (get-storage info storage-default)
          net-interface (get-interface info network-default)
+         _ (log/info {:net-interface net-interface :network-default network-default})
          mem-factor (* 1024 1024 1024)
          st-factor (* 1024 1024 1024)
          net-factor (* 1024 1024)]
@@ -91,7 +90,7 @@
        {:id id
         :os-platform (get-in info [:platform])
         :os-version (get-in info [:operatingSystem :version :version])
-        :os-build (get-in info [:operatingSystem :version :build])
+        :os-build (get-in info [:operatingSystem :version :buildNumber])
         :os-storage-name (get os-storage :name "Not configured")
         :os-storage-volume (get os-storage :volume)
         :os-storage-usable-space (double (/ (get os-storage :usableSpace 0) st-factor))
@@ -110,10 +109,10 @@
         :mem-swap-used  (double (/ (get-in info [:hardware :memory :swapUsed] 0)  mem-factor))
         :net-name (get net-interface :name "Not configured")
         :net-display-name (get net-interface :displayName)
-        :net-mac (get net-interface :mac)
-        :net-ipv4 (first (get net-interface :ipv4))
-        :net-ipv6 (first (get net-interface :ipv6))
-        :net-mtu (get net-interface :mtu)
+        :net-mac (get net-interface :macaddr)
+        :net-ipv4 (first (get net-interface :IPv4addr))
+        :net-ipv6 (first (get net-interface :IPv6addr))
+        :net-mtu (get net-interface :MTU)
         :net-mbytes-received (double (/ (get net-interface :bytesRecv 0) net-factor))
         :net-mbytes-sent     (double (/ (get net-interface :bytesSent 0) net-factor))
         :net-speed          (double (/ (get net-interface :speed 0)     net-factor))
@@ -126,13 +125,3 @@
                                     0
                                     (get-in info [:hardware :usbDevices]))}
        merge-data)))))
-
-#_(defn send-data [data tcp-push-host tcp-push-port]
-  (log/info (pr-str {:sending-data-to [tcp-push-host tcp-push-port]}))
-  (try
-    (with-open [d-socket (java.net.Socket. tcp-push-host tcp-push-port)
-                os (.getOutputStream d-socket)]
-      (.write os (.getBytes data "UTF-8"))
-      (.write os 10))
-    (catch Exception e
-      (log/error (pr-str {:cause (-> e .getMessage)})))))
