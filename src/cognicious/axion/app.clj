@@ -40,25 +40,31 @@
    (Thread. #(log/info (pr-str {:stop app})))))
 
 (defn draw []
-  (let [{:axn/keys [id]} @conf/config]
-    (javax.swing.UIManager/setLookAndFeel (javax.swing.UIManager/getCrossPlatformLookAndFeelClassName))
-    (doto (javax.swing.JFrame. ":axion/id")
-      (.setContentPane (doto (proxy [javax.swing.JPanel] []
-                               (paint [^java.awt.Graphics g]
-                                 (let [curr-font (-> g (.getFont))
-                                       big-font (-> curr-font (.deriveFont (* (.getSize curr-font) 3.0)))
-                                       small-font (-> curr-font (.deriveFont (* (.getSize curr-font) 0.7)))]
-                                   (.setRenderingHint g java.awt.RenderingHints/KEY_TEXT_ANTIALIASING
-                                                        java.awt.RenderingHints/VALUE_TEXT_ANTIALIAS_LCD_HRGB)
-                                   (.setFont g big-font)
-                                   (.drawString g id 20 50)
-                                   (.setFont g small-font)
-                                   (.drawString g @error 20 100))))
-                         (.setPreferredSize (java.awt.Dimension. 300 150))))
-      (.setDefaultCloseOperation javax.swing.JFrame/DO_NOTHING_ON_CLOSE)
-      (.setState javax.swing.JFrame/ICONIFIED)
-      (.pack)
-      (.setVisible true))))
+  (if (java.awt.GraphicsEnvironment/isHeadless)
+    (try
+      (let [{:axn/keys [id]} @conf/config]
+        (javax.swing.UIManager/setLookAndFeel (javax.swing.UIManager/getCrossPlatformLookAndFeelClassName))
+        (doto (javax.swing.JFrame. ":axion/id")
+          (.setContentPane (doto (proxy [javax.swing.JPanel] []
+                                   (paint [^java.awt.Graphics g]
+                                     (let [curr-font (-> g (.getFont))
+                                           big-font (-> curr-font (.deriveFont (* (.getSize curr-font) 3.0)))
+                                           small-font (-> curr-font (.deriveFont (* (.getSize curr-font) 0.7)))]
+                                       (.setRenderingHint g java.awt.RenderingHints/KEY_TEXT_ANTIALIASING
+                                                          java.awt.RenderingHints/VALUE_TEXT_ANTIALIAS_LCD_HRGB)
+                                       (.setFont g big-font)
+                                       (.drawString g id 20 50)
+                                       (.setFont g small-font)
+                                       (.drawString g @error 20 100))))
+                             (.setPreferredSize (java.awt.Dimension. 300 150))))
+          (.setDefaultCloseOperation javax.swing.JFrame/DO_NOTHING_ON_CLOSE) 
+          (.setState javax.swing.JFrame/ICONIFIED)
+          (.pack)
+          (.setVisible true)))
+      (catch Throwable e
+        (log/warn (pr-str {:gui-error (.getMessage e)
+                           :no-gui "System without UI detected, check config.edn for :axion/id"}))))
+    (log/info (pr-str {:no-gui "System without UI detected, check config.edn for :axion/id"}))))
 
 (defn -main
   [& args]
@@ -105,5 +111,6 @@
                 (reset! error (.getMessage t))
                 (log/warn {:previous-errors (.getMessage t)}))
               (finally
-                (javax.swing.SwingUtilities/updateComponentTreeUI window)))
+                (if window
+                  (javax.swing.SwingUtilities/updateComponentTreeUI window))))
             (Thread/sleep push-period))))))
