@@ -8,38 +8,30 @@
 
 (def connection-pool (http/connection-pool
                       {:connections-per-host 4                       
-                       :connection-options   {:keep-alive? true}}))
+                       :connection-options   {:keep-alive? true
+                                              :insecure? true}}))
 
 (defn body->edn [response]
   (-> response :body bs/to-string (json/read-str :key-fn keyword)))
 
 (defn send-data [data url]
   (log/debug (pr-str {:sending-data-to url}))
-  (try
-    (-> @(http/request {:url url
+  (-> @(http/request {:url url
                         :request-method "post"
                         :request-timeout 5000
                         :pool connection-pool
                         :body data
-                        :headers {"content-type" "application/json"}}))
-    (catch clojure.lang.ExceptionInfo e
-      (log/warn (pr-str {:send-data (.getMessage e)}))
-      (.printStackTrace e)
-      (-> e .getData body->edn))))
+                        :headers {"content-type" "application/json"}})))
 
 (defn send-config [url]
-  (try 
-    (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
+  (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
           data (-> path slurp read-string)]
       (-> @(http/request {:url url
                           :request-method "post"
                           :request-timeout 5000
                           :pool connection-pool
                           :body (pr-str data)
-                          :headers {"content-type" "application/edn"}})))
-    (catch Exception e
-      (.printStackTrace e)
-      (log/warn (pr-str {:send-config (.getMessage e)})))))
+                          :headers {"content-type" "application/edn"}}))))
 
 (defmulti state-command (fn [key value id streamer-push-url]
                           (let [[_ command remote-id] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-zA-Z0-9:\-]+)\"\]" (name key))]
@@ -80,10 +72,7 @@
       (json/read-str :key-fn keyword)))
 
 (defn poll-state [streamer-push-url streamer-poll-url id]
-  (try
-    (reduce
+  (reduce
      (state-reducer id streamer-push-url)
      nil
-     (retrieve-state streamer-poll-url connection-pool))
-    (catch Exception e
-      (log/error e))))
+     (retrieve-state streamer-poll-url connection-pool)))
