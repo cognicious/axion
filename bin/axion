@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# Axion script
+
+# Environment variables to determine startup behavior
+#
+# AXION_BIN      Location of this file
+# AXION_HOME     Location of Axion directory
+# AXION_LIB      Location of JAR dependency
+# AXION_CONFIG   Location of Config directory (*.clj and log4j2.xml)
+# MINIMUM_MEMORY  Minimum Memory of JVM
+# MAXIMUM_MEMORY  Maximum Memory of JVM
+# TIMEZONE        ID for a TimeZone, either an abbreviation such as 
+#                 "PST", a full name such as "America/Los_Angeles", or
+#                 a custom ID such as "GMT-8:00".
+
+if test -z "$AXION_BIN"; then
+  export AXION_BIN="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+fi
+
+if test -z "$AXION_HOME"; then
+  export AXION_HOME=$(dirname $AXION_BIN)
+fi
+
+if test -z "$AXION_CONFIG"; then
+  export AXION_CONFIG=$AXION_HOME/config
+fi
+
+if test -z "$AXION_LIB"; then
+  export AXION_LIB=$AXION_HOME/lib/*.jar
+fi
+
+if test -z "$MININUM_MEMORY"; then
+  export MININUM_MEMORY=128m
+fi
+
+if test -z "$MAXIMUM_MEMORY"; then
+  export MAXIMUM_MEMORY=128m
+fi
+
+if test -z "$TIMEZONE"; then 
+  export TIMEZONE=America/Mexico_City
+fi
+
+start() {
+
+  # Check for process already started in daemon mode
+  if [ -f "$AXION_HOME/$AXION_NAME.pid" ] ; then
+    pid=$( cat $AXION_HOME/$AXION_NAME.pid )
+    verif=$( ps -fea | grep "$pid" | grep -v "grep" )
+    if [ $? == 0 ] ; then
+      echo "Axion already started PID : $pid"
+      exit 2
+    else
+      echo "Axion PID file is orphan PID : $pid, deleting ..."
+      rm $AXION_HOME/$AXION_NAME.pid 
+    fi
+  fi
+
+  # Check for JAVA
+  echo "Verifying JAVA installation ..."
+  if [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
+    JAVA_BIN="$JAVA_HOME/bin/java"
+  elif type -p java; then
+    JAVA_BIN=java
+  else
+    echo "No JAVA installation found, please verify. Exiting ..."
+    exit 1
+  fi
+  echo "Using JVM installed on : $JAVA_BIN ..."
+  
+  # Check version
+  if [[ "$JAVA_BIN" ]]; then
+    JAVA_VERSION=$("$JAVA_BIN" -version 2>&1 | awk -F '"' '/version/ {print $2}')
+    echo "JAVA Version : $JAVA_VERSION"
+    MAYOR_DIGIT=$( echo $JAVA_VERSION | sed -n 's/\([0-9]*\)\..*/\1/p' )
+    if [ $MAYOR_DIGIT -gt "1" ]; then
+      JVM_OPTS="-server -XX:+CMSParallelRemarkEnabled -XX:+AggressiveOpts -XX:+CMSClassUnloadingEnabled -XX:+IgnoreUnrecognizedVMOptions --add-modules=java.xml.bind"
+    else
+      JVM_OPTS="-server -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:+CMSParallelRemarkEnabled -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -XX:+UseCompressedOops -XX:+CMSClassUnloadingEnabled"
+    fi
+  fi
+
+  # Start: normal or daemon mode
+  if [ -z "$AXION_DAEMON" ] ; then
+    $JAVA_BIN -Xms$MININUM_MEMORY -Xmx$MAXIMUM_MEMORY -Duser.timezone=$TIMEZONE $JVM_OPTS -jar $AXION_LIB
+  else
+    $JAVA_BIN -Xms$MININUM_MEMORY -Xmx$MAXIMUM_MEMORY -Duser.timezone=$TIMEZONE $JVM_OPTS -jar $AXION_LIB 2>&1 &
+
+    retval=$?
+    pid=$!
+
+    echo "Using PID : $pid"
+
+    echo "$pid" > $AXION_HOME/$AXION_NAME.pid
+    [ $retval -eq 0 ] || exit $retval
+    if ! ps -p $pid > /dev/null ; then
+      exit 1
+    fi
+    exit 0
+  fi
+  exit $?
+}
+
+stop() {
+  # Stop: daemon or normal mode
+  if [ -f "$AXION_HOME/$AXION_NAME.pid" ] ; then
+    pid=$( cat $AXION_HOME/$AXION_NAME.pid )
+    kill $pid > /dev/null 2>&1   
+    rm $AXION_HOME/$AXION_NAME.pid
+    while ps -fea | grep $pid | grep $AXION_NAME > /dev/null ; do
+      sleep 1      
+    done
+    echo 
+    exit 0
+  else
+    echo "Unable to find $AXION_HOME/$AXION_NAME.pid"
+    exit 1
+  fi
+}
+
+restart() {
+  # Restarts only in daemon mode
+  AXION_DAEMON=true
+  if [ -f "$AXION_HOME/$AXION_NAME.pid" ] ; then
+    pid=$( cat $AXION_HOME/$AXION_NAME.pid )
+    kill $pid > /dev/null 2>&1
+    rm $AXION_HOME/$AXION_NAME.pid
+    while ps -fea | grep $pid | grep $AXION_NAME > /dev/null ; do
+      sleep 1      
+    done
+    echo 
+    start
+  else
+    echo "Unable to find $AXION_HOME/$AXION_NAME.pid"
+    start
+  fi
+}
+
+usage() {
+    printf "Usage: axion <option> <command>\n"
+    printf "options:\n"
+    printf "\t-d\tDaemonized option.\n"
+    printf "\t-c\tTakes a custom configuration directory. Overrides AXION_CONFIG environment variable.\n"
+    printf "commands:\n"
+    printf "\tstart\tStarts $AXION_NAME servcie\n"
+    printf "\tstop\tStops $AXION_NAME service using $AXION_HOME/$AXION_NAME.pid\n"
+    printf "\trestart\tStops and Start $AXION_NAME service daemonized\n"
+    printf "example:\n"
+    printf "\taxion -c ./config start\n\n"
+    exit 1
+}
+
+while getopts "c:dh" opt; do
+  case $opt in
+    c)
+      AXION_CONFIG=$OPTARG
+      ;;
+    d)
+      AXION_DAEMON=true
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+shift $(expr $OPTIND - 1 )
+case $1 in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    usage
+    ;;
+esac
