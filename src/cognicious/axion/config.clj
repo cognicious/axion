@@ -17,7 +17,7 @@
                      :axn/server-host "localhost"
                      :axn/server-port 8081
                      :axn/push-period 10000
-                     :axn/streamer "http://axion.cognicio.us"})
+                     :axn/streamer "https://axion.cognicio.us"})
 
 (def path (.getCanonicalPath (clojure.java.io/file "./config.edn")))
 
