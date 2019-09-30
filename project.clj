@@ -13,7 +13,13 @@
                  [bidi "2.1.3"]
                  ;; logging
                  [org.apache.logging.log4j/log4j-core "2.11.0"]
-                 [org.apache.logging.log4j/log4j-slf4j-impl "2.11.0"]]
+                 [org.apache.logging.log4j/log4j-slf4j-impl "2.11.0"]
+		 ;;
+		 [javax.xml.bind/jaxb-api "2.2.11"]
+                 [com.sun.xml.bind/jaxb-core "2.2.11"]
+                 [com.sun.xml.bind/jaxb-impl "2.2.11"]
+                 [javax.activation/activation "1.1.1"]
+		]
   :plugins [[lein-cloverage "1.0.11"]]
   :main cognicious.axion.app
   :aot :all)
