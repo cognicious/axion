@@ -40,8 +40,7 @@
    (Thread. #(log/info (pr-str {:stop app})))))
 
 (defn draw []
-  (if (java.awt.GraphicsEnvironment/isHeadless)
-    (try
+  (try
       (let [{:axn/keys [id]} @conf/config]
         (javax.swing.UIManager/setLookAndFeel (javax.swing.UIManager/getCrossPlatformLookAndFeelClassName))
         (doto (javax.swing.JFrame. ":axion/id")
@@ -63,8 +62,7 @@
           (.setVisible true)))
       (catch Throwable e
         (log/warn (pr-str {:gui-error (.getMessage e)
-                           :no-gui "System without UI detected, check config.edn for :axion/id"}))))
-    (log/info (pr-str {:no-gui "System without UI detected, check config.edn for :axion/id"}))))
+                           :no-gui "System without UI detected, check config.edn for :axion/id"})))))
 
 (defn -main
   [& args]
