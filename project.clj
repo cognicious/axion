@@ -1,4 +1,4 @@
-(defproject cognicious/axion "0.2.5-SNAPSHOT"
+(defproject cognicious/axion "0.2.6-SNAPSHOT"
   :description "Lightweight Cross-platform Monitoring Agent"
   :url "https://github.com/cognicious/axion"
   :license {:name "Eclipse Public License"
@@ -9,7 +9,8 @@
                  ;; platform info
                  [com.github.oshi/oshi-core "4.0.0"]
                  ;; communication
-                 [aleph "0.4.6"]
+                 ;[aleph "0.4.6"]
+                 [clj-http "3.9.1"]
                  [bidi "2.1.3"]
                  ;; logging
                  [org.apache.logging.log4j/log4j-core "2.11.0"]
