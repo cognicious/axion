@@ -9,7 +9,7 @@
                  ;; platform info
                  [com.github.oshi/oshi-core "4.0.0"]
                  ;; communication
-                 ;[aleph "0.4.6"]
+                 [aleph "0.4.6"]
                  [clj-http "3.9.1"]
                  [bidi "2.1.3"]
                  ;; logging
