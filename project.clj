@@ -10,7 +10,6 @@
                  [com.github.oshi/oshi-core "4.0.0"]
                  ;; communication
                  [aleph "0.4.6"]
-                 [clj-http "3.9.1"]
                  [bidi "2.1.3"]
                  ;; logging
                  [org.apache.logging.log4j/log4j-core "2.11.0"]
