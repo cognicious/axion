@@ -14,21 +14,21 @@
 (defn body->edn [response]
   (-> response :body bs/to-string (json/read-str :key-fn keyword)))
 
-(defn send-data [data url]
+(defn send-data [data url timeout]
   (log/debug (pr-str {:sending-data-to url}))
   (-> @(http/request {:url url
                         :request-method "post"
-                        :request-timeout 5000
+                        :request-timeout timeout
                         :pool connection-pool
                         :body data
                         :headers {"content-type" "application/json"}})))
 
-(defn send-config [url]
+(defn send-config [url timeout]
   (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
           data (-> path slurp read-string)]
       (-> @(http/request {:url url
                           :request-method "post"
-                          :request-timeout 5000
+                          :request-timeout timeout
                           :pool connection-pool
                           :body (pr-str data)
                           :headers {"content-type" "application/edn"}}))))
@@ -62,17 +62,17 @@
     (log/debug :state-reducer (pr-str [key value]))
     (state-command key value id streamer-push-url)))
 
-(defn retrieve-state [http-poll-url connection-pool]
+(defn retrieve-state [http-poll-url connection-pool timeout]
   (-> @(http/request {:url http-poll-url
                       :request-method "get"
-                      :request-timeout 5000
+                      :request-timeout timeout
                       :pool connection-pool})
       :body
       bs/to-string
       (json/read-str :key-fn keyword)))
 
-(defn poll-state [streamer-push-url streamer-poll-url id]
+(defn poll-state [streamer-push-url streamer-poll-url id timeout]
   (reduce
      (state-reducer id streamer-push-url)
      nil
-     (retrieve-state streamer-poll-url connection-pool)))
+     (retrieve-state streamer-poll-url connection-pool timeout)))

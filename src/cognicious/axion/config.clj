@@ -27,6 +27,7 @@
                      :axn/server-host (gen-axion-local-server)
                      :axn/server-port 8081
                      :axn/push-period 10000
+                     :axn/push-timeout 5000
                      :axn/streamer (gen-axion-streamer)})
 
 (def path (.getCanonicalPath (clojure.java.io/file "./config.edn")))
@@ -65,6 +66,7 @@
 (spec/def :axn/config (spec/keys :req [:axn/id
                                        :axn/server-port
                                        :axn/push-period
+                                       :axn/push-timeout
                                        :axn/streamer]
                                  :opt [:axn/server-host 
                                        :axn/merge-data

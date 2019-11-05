@@ -74,6 +74,7 @@
                       server-host
                       server-port
                       push-period
+                      push-timeout
                       streamer
                       storage-default
                       network-default
@@ -91,6 +92,7 @@
                                   server-host
                                   server-port
                                   push-period
+                                  push-timeout
                                   streamer
                                   storage-default
                                   network-default
@@ -100,9 +102,9 @@
                       info (sys/info config)
                       _ (log/debug info)]
                   (if id
-                    (client/poll-state streamer-push-url streamer-poll-url id))
-                  (client/send-data info streamer-push-url)
-                  (client/send-config streamer-push-url)
+                    (client/poll-state streamer-push-url streamer-poll-url id push-timeout))
+                  (client/send-data info streamer-push-url push-timeout)
+                  (client/send-config streamer-push-url push-timeout)
                   (when-not (= @error "Online")                    
                     (reset! error "Online"))))
               (catch Throwable t
