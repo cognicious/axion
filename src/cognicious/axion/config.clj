@@ -11,13 +11,23 @@
 (defn rand-str [len]
   (apply str (take len (repeatedly #(char (+ (rand 26) 65))))))
 
+(defn gen-axion-streamer []
+  (if-let [streamer (System/getenv "AXION_STREAMER_DEFAULT")]
+    streamer
+    "https://axion.cognicio.us"))
+
+(defn gen-axion-local-server []
+  (if-let [server (System/getenv "AXION_LOCALSERVER_DEFAULT")]
+    server
+    "localhost"))
+
 (def config (atom nil))
 
 (def default-config {:axn/id (rand-str 6)
-                     :axn/server-host "localhost"
+                     :axn/server-host (gen-axion-local-server)
                      :axn/server-port 8081
                      :axn/push-period 10000
-                     :axn/streamer "https://axion.cognicio.us"})
+                     :axn/streamer (gen-axion-streamer)})
 
 (def path (.getCanonicalPath (clojure.java.io/file "./config.edn")))
 
