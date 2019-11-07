@@ -57,7 +57,6 @@
 (defn get-interface [info network-name]
   "Receives info map and optional store-name and returns a network info"
   (let [interfaces (get-in info [:hardware :networkIFs])]
-    (log/info {:before interfaces})
     (reduce (fn [r {:keys [name displayName packetsRecv packetsSent] :as i}] 
                 (if network-name
                   (if (or (= name network-name)
@@ -81,7 +80,6 @@
          ;; defaults
          os-storage (get-storage info storage-default)
          net-interface (get-interface info network-default)
-         _ (log/info {:net-interface net-interface :network-default network-default})
          mem-factor (* 1024 1024 1024)
          st-factor (* 1024 1024 1024)
          net-factor (* 1024 1024)]
