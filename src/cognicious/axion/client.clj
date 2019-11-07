@@ -33,18 +33,18 @@
                           :body (pr-str data)
                           :headers {"content-type" "application/edn"}}))))
 
-(defmulti state-command (fn [key value id streamer-push-url]
+(defmulti state-command (fn [key value id streamer-push-url timeout]
                           (let [[_ command remote-id] (re-matches #"\[:([a-zA-Z0-9\-]+) \"([a-zA-Z0-9:\-]+)\"\]" (name key))]
                             (when (and command (= id remote-id))
                               (keyword command)))))
 
-(defmethod state-command :screen [key value id streamer-push-url]
+(defmethod state-command :screen [key value id streamer-push-url timeout]
   (-> value
       (assoc :screenshot (screen/take64))
       (json/write-str :key-fn #(str (.-sym %)))
-      (send-data streamer-push-url)))
+      (send-data streamer-push-url timeout)))
 
-(defmethod state-command :config [key value id _]
+(defmethod state-command :config [key value id _ _]
   (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
         current (-> path slurp read-string)
         _ (log/debug (pr-str {:current current}))
@@ -54,13 +54,13 @@
       (log/warn (pr-str {:config-replace value}))
       (spit conf/path value))))
 
-(defmethod state-command :default [key _ _ _]
+(defmethod state-command :default [key _ _ _ _]
   (log/debug "Nothing to do ... " (pr-str key)))
 
-(defn state-reducer [id streamer-push-url]
+(defn state-reducer [id streamer-push-url timeout]
   (fn [a [key value]]
     (log/debug :state-reducer (pr-str [key value]))
-    (state-command key value id streamer-push-url)))
+    (state-command key value id streamer-push-url timeout)))
 
 (defn retrieve-state [http-poll-url connection-pool timeout]
   (-> @(http/request {:url http-poll-url
@@ -73,6 +73,6 @@
 
 (defn poll-state [streamer-push-url streamer-poll-url id timeout]
   (reduce
-     (state-reducer id streamer-push-url)
+     (state-reducer id streamer-push-url timeout)
      nil
      (retrieve-state streamer-poll-url connection-pool timeout)))
