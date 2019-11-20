@@ -1,6 +1,6 @@
 # axion
 
-A Clojure library designed to ... well, that part is up to you.
+Lightweight Cross-platform Monitoring Agent 
 
 ## Usage
 
