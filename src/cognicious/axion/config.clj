@@ -69,15 +69,15 @@
 (spec/def :axn/network-default string?)
 (spec/def :axn/config (spec/keys :req [:axn/id
                                        :axn/server-port
-                                       :axn/push-port
-                                       :axn/poll-port
                                        :axn/push-period
                                        :axn/push-timeout
                                        :axn/streamer]
                                  :opt [:axn/server-host 
                                        :axn/merge-data
                                        :axn/storage-default
-                                       :axn/network-default]))
+                                       :axn/network-default
+                                       :axn/push-port
+                                       :axn/poll-port]))
 (spec/fdef get-config
            :args (spec/cat :path string?) 
            :ret :axn/config)
