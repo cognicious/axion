@@ -70,6 +70,12 @@
               nil
               interfaces)))
 
+(defn name-version
+  "Returns name and version reading project.clj"
+  []
+  (let [[_ name version] (-> (project-clj meta-project) slurp read-string vec)]
+    {:name name :version version}))
+
 (defn info 
   "Dispatches tiny version of system information"
   ([]
@@ -86,6 +92,8 @@
      (json/write-str
       (merge
        {:id id
+        :client-version (last (name-version))
+        :uptime (System/currentTimeMillis)
         :os-platform (get-in info [:platform])
         :os-version (get-in info [:operatingSystem :version :version])
         :os-build (get-in info [:operatingSystem :version :buildNumber])
