@@ -75,6 +75,8 @@
                       server-port
                       push-period
                       push-timeout
+                      push-port
+                      poll-port
                       streamer
                       storage-default
                       network-default
@@ -82,8 +84,8 @@
            :or {server-host "localhost"}
            :as config} (conf/get-config!)]
       (let [server (server/start-server config app)
-            streamer-push-url (str streamer ":9999/event")
-            streamer-poll-url (str streamer ":10000/state/http-streamers")
+            streamer-push-url (str streamer ":" push-port "/event")
+            streamer-poll-url (str streamer ":" poll-port" /state/http-streamers")
             window (draw)]
           (while [true]
             (try
