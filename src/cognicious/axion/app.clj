@@ -81,7 +81,7 @@
                       storage-default
                       network-default
                       merge-data]
-           :or {server-host "localhost"}
+           :or {server-host "localhost" push-post 9999 poll-port 10000}
            :as config} (conf/get-config!)]
       (let [server (server/start-server config app)
             streamer-push-url (str streamer ":" push-port "/event")
@@ -110,6 +110,7 @@
                   (when-not (= @error "Online")                    
                     (reset! error "Online"))))
               (catch Throwable t
+                (.printStackTrace t)
                 (reset! error (.getMessage t))
                 (log/warn {:previous-errors (.getMessage t)}))
               (finally
