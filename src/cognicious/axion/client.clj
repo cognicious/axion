@@ -27,8 +27,8 @@
     (let [online (retrieve* http-poll-url "check" id timeout)]
       (if (not (empty? online))
         (let [[things-only-in-online things-only-in-local things-in-both] (diff online local)
-              [timeout data] (cond (nil? things-in-both) [(* timeout 35) things-only-in-local] ;; Big Load
-                                   things-only-in-local  [timeout things-only-in-local]        ;; Moderate Load, only changes
+              [timeout data] (cond (nil? things-in-both) [(* timeout 45) things-only-in-local] ;; Big Load
+                                   things-only-in-local  [(* timeout 35) things-only-in-local]        ;; Moderate Load, only changes
                                    :otherwise [nil nil])]
           (if (and timeout data)
             (http/post url {:connection-timeout timeout
@@ -46,7 +46,7 @@
                                  :body (pr-str data)
                                  :headers {"content-type" "application/edn"}
                                  :oncancel #(log/error "request was cancelled " (* timeout 35))}
-                            #(log/debug :got %)
+                            #(log/info :got %)
                             #(log/error :err %))]
       (try
         (.get future (* timeout 35) TimeUnit/MILLISECONDS)
