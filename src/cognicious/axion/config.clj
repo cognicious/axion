@@ -26,6 +26,8 @@
 (def default-config {:axn/id (rand-str 6)
                      :axn/server-host (gen-axion-local-server)
                      :axn/server-port 8081
+                     :axn/push-port 9999
+                     :axn/poll-port 10000
                      :axn/push-period 10000
                      :axn/push-timeout 5000
                      :axn/streamer (gen-axion-streamer)})
@@ -59,12 +61,16 @@
 (spec/def :axn/server-host string?)
 (spec/def :axn/server-port (spec/and number? #(<= 0 % 65535)))
 (spec/def :axn/push-period number?)
+(spec/def :axn/push-port (spec/and number? #(<= 0 % 65535)))
+(spec/def :axn/poll-port (spec/and number? #(<= 0 % 65535)))
 (spec/def :axn/streamer (spec/and string? valid-url?))
 (spec/def :axn/merge-data map?)
 (spec/def :axn/storage-default string?)
 (spec/def :axn/network-default string?)
 (spec/def :axn/config (spec/keys :req [:axn/id
                                        :axn/server-port
+                                       :axn/push-port
+                                       :axn/poll-port
                                        :axn/push-period
                                        :axn/push-timeout
                                        :axn/streamer]
