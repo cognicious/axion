@@ -81,11 +81,11 @@
                       storage-default
                       network-default
                       merge-data]
-           :or {server-host "localhost" push-post 9999 poll-port 10000}
+           :or {server-host "localhost" push-port 9999 poll-port 10000}
            :as config} (conf/get-config!)]
       (let [server (server/start-server config app)
             streamer-push-url (str streamer ":" push-port "/event")
-            streamer-poll-url (str streamer ":" poll-port" /state/http-streamers")
+            streamer-poll-url (str streamer ":" poll-port "/state/http-streamers")
             window (draw)]
           (while [true]
             (try
@@ -105,7 +105,7 @@
                       _ (log/debug info)]
                   (if id
                     (client/poll-state streamer-push-url streamer-poll-url id push-timeout))
-                  (client/send-data info streamer-push-url push-timeout)
+                  (client/send-data info streamer-push-url streamer-poll-url id push-timeout)
                   (client/send-config streamer-push-url push-timeout)
                   (when-not (= @error "Online")                    
                     (reset! error "Online"))))
