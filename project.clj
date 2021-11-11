@@ -3,7 +3,7 @@
   :url "https://github.com/cognicious/axion"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.10.2"]
+  :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/java.data "0.1.1"]
                  ;; platform info
