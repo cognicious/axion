@@ -14,7 +14,7 @@
 (defn gen-axion-streamer []
   (if-let [streamer (System/getenv "AXION_STREAMER_DEFAULT")]
     streamer
-    "https://axion.cognicio.us"))
+    "http://axion.cognicio.us"))
 
 (defn gen-axion-local-server []
   (if-let [server (System/getenv "AXION_LOCALSERVER_DEFAULT")]
