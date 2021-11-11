@@ -7,7 +7,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/java.data "0.1.1"]
                  ;; platform info
-                 [com.github.oshi/oshi-core "4.0.0"]
+                 [com.github.oshi/oshi-core "5.8.3"]
                  ;; communication
                  [aleph/aleph "0.4.6"]
                  [bidi/bidi "2.1.3"]
