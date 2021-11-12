@@ -53,16 +53,16 @@
         (catch TimeoutException e
           (.cancel future true)))))
 
-  (defmulti state-command (fn [key value id streamer-push-url timeout]
+  (defmulti state-command (fn [key value id streamer-push-url streamer-poll-url timeout]
                             (keyword key)))
 
-  (defmethod state-command :screen [key value id streamer-push-url timeout]
+  (defmethod state-command :screen [key value id streamer-push-url streamer-poll-url timeout]
     (-> value
         (assoc :screenshot (screen/take64))
         (json/write-str :key-fn #(str (.-sym %)))
-        (send-data streamer-push-url timeout)))
+        (send-data streamer-push-url streamer-poll-url id timeout)))
 
-  (defmethod state-command :config [key value id _ _]
+  (defmethod state-command :config [key value id _ _ _]
     (let [path (.getCanonicalPath (clojure.java.io/file "./config.edn"))
           current (-> path slurp read-string)
           _ (log/debug (pr-str {:current current}))
@@ -72,13 +72,13 @@
         (log/warn (pr-str {:config-replace value}))
         (spit conf/path value))))
 
-  (defmethod state-command :default [key _ _ _ _]
+  (defmethod state-command :default [key _ _ _ _ _]
     (log/debug "Nothing to do ... " (pr-str key)))
 
-  (defn state-reducer [id streamer-push-url timeout]
+  (defn state-reducer [id streamer-push-url streamer-poll-url timeout]
     (fn [a [key value]]
       (log/debug :state-reducer (pr-str [key value]))
-      (state-command key value id streamer-push-url timeout)))
+      (state-command key value id streamer-push-url streamer-poll-url timeout)))
 
   (defn retrieve-state [http-poll-url id timeout]
     (-> {}
@@ -87,6 +87,6 @@
 
   (defn poll-state [streamer-push-url streamer-poll-url id timeout]
     (reduce
-     (state-reducer id streamer-push-url timeout)
+     (state-reducer id streamer-push-url  streamer-poll-url timeout)
      nil
      (retrieve-state streamer-poll-url id timeout))))
