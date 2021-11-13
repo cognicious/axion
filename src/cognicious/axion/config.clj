@@ -21,6 +21,11 @@
     server
     "localhost"))
 
+(defn gen-config []
+  (if-let [config (System/getenv "AXION_CONFIG")]
+    (clojure.java.io/file config)
+    (clojure.java.io/file "./config.edn")))
+
 (def config (atom nil))
 
 (def default-config {:axn/id (rand-str 6)
@@ -32,7 +37,7 @@
                      :axn/push-timeout 5000
                      :axn/streamer (gen-axion-streamer)})
 
-(def path (.getCanonicalPath (clojure.java.io/file "./config.edn")))
+(def path (.getCanonicalPath (gen-config)))
 
 (defn create-config!
   "Create default configuration file"
