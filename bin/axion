@@ -22,7 +22,7 @@ if test -z "$AXION_HOME"; then
 fi
 
 if test -z "$AXION_CONFIG"; then
-  export AXION_CONFIG=$AXION_HOME/config
+  export AXION_CONFIG=$AXION_HOME/config.edn
 fi
 
 if test -z "$AXION_LIB"; then
