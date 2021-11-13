@@ -22,9 +22,10 @@
     "localhost"))
 
 (defn gen-config []
-  (if-let [config (System/getenv "AXION_CONFIG")]
-    (clojure.java.io/file config)
-    (clojure.java.io/file "./config.edn")))
+  (clojure.java.io/file
+   (if-let [config (System/getenv "AXION_CONFIG")]
+     config
+     "./config.edn")))
 
 (def config (atom nil))
 
