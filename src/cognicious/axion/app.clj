@@ -82,7 +82,8 @@
                       network-default
                       merge-data]
            :or {server-host "localhost" push-port 9999 poll-port 10000}
-           :as config} (conf/get-config!)]
+           :as config} (conf/get-config!)
+          _ (log/debug config)]
       (let [server (server/start-server config app)
             streamer-push-url (str streamer ":" push-port "/event")
             streamer-poll-url (str streamer ":" poll-port "/state/http-streamers")
